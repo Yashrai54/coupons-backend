@@ -16,13 +16,14 @@ router.post("/claim", async (req, res) => {
         res.cookie("sessionToken", userSession, {
             maxAge: 60 * 60 * 1000, // 1 hour expiry
             httpOnly: true, // Prevents client-side tampering
-            sameSite: "Strict", // Prevents CSRF attacks
+            secure: true, // Works only on HTTPS (important for production)
+            sameSite: "None", // Allows cross-site requests
         });
     }
 
-    // **Step 2: Check MongoDB if user has claimed in the last 1 hour**
+    // **Step 2: Check if user already claimed a coupon (session or IP)**
     const lastClaim = await Coupon.findOne({
-        $or: [{ assignedTo: userSession }, { assignedTo: userIp }]
+        $or: [{ assignedTo: userSession }, { assignedIp: userIp }]
     }).sort({ assignedAt: -1 });
 
     if (lastClaim && (Date.now() - new Date(lastClaim.assignedAt).getTime() < 60 * 60 * 1000)) {
